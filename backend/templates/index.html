@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>SwiftAid - Disaster Management V2</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+
+:root {
+    --primary-color: #1f2937; 
+    --accent-color: #3b82f6; 
+    --bg-color: #111827; 
+    --card-bg: #1f2937; 
+    --vol-bg: #22c55e; 
+}
+body { background-color: var(--bg-color); color: #f9fafb; font-family: Inter, sans-serif; }
+.header-bg { background-color: var(--primary-color); border-bottom: 2px solid var(--accent-color); }
+.card-bg { background-color: var(--card-bg); border: 1px solid rgba(55, 65, 81, 0.5); }
+
+
+input, textarea, select { 
+    background-color: #000000; 
+    color: #ffffff; 
+    border: 1px solid #4b5563; 
+    
+
+
+.badge-pending { background-color: #d97706; }
+.badge-inprogress { background-color: #1d4ed8; }
+.badge-resolved { background-color: #10b981; }
+.badge-emergency { background-color: #ef4444; animation: pulse 1s infinite alternate;}
+.badge-normal { background-color: #3b82f6; }
+@keyframes pulse { from { transform: scale(1); } to { transform: scale(1.05); } }
+.vol-card { transition: transform 0.2s; }
+.vol-card:hover { transform: translateY(-3px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3); }
+.update-crisis { background-color: #fca5a5; color: #7f1d1d; }
+.update-casualty { background-color: #f87171; color: #7f1d1d; animation: pulse 0.5s infinite alternate; }
+</style>
+</head>
+<body class="font-sans">
+<header class="header-bg text-white p-4 text-center">
+    <h1 class="text-3xl font-bold">🌍 SwiftAid - Command & Control System</h1>
+</header>
+<main class="max-w-6xl mx-auto p-4">
+
+
+<section id="login-section" class="card-bg p-6 rounded-xl shadow-lg mb-6">
+    <h2 class="text-xl font-semibold mb-4 text-gray-200">Login</h2>
+    <input id="username" class="w-full p-2 mb-3 border rounded" placeholder="username (admin / user1-10 / v101-120)"/>
+    <input id="password" type="password" class="w-full p-2 mb-4 border rounded" placeholder="password (admin: admin123, others: 1234)"/>
+    <button onclick="doLogin()" class="btn-primary hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition duration-150 w-full">Login</button>
+    <div id="login-msg" class="text-sm mt-3 text-red-400"></div>
+</section>
+
+
+<section id="app-section" class="hidden">
+   
+    <div id="main-menu" class="flex space-x-2 mb-4">
+        
+        <button onclick="show('view')" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition duration-150">📋 View Priority Status</button>
+        
+        
+        <button id="report-btn" onclick="show('report-disaster')" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded transition duration-150 hidden">🚨 Send New Report</button>
+        
+        
+        <button id="vol-hub-btn" onclick="show('volunteer-hub')" class="btn-vol hover:bg-green-600 text-white font-bold py-2 px-4 rounded transition duration-150 hidden">🧑‍🚒 Mission Hub</button>
+
+     
+        <button id="locations-btn" onclick="show('locations')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded transition duration-150 hidden">🧑‍💻 Volunteer Locations</button>
+        <button id="admin-btn" onclick="show('admin')" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded transition duration-150 hidden">⚙️ Management Panel</button>
+        
+        <button onclick="logout()" class="btn-danger hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition duration-150">🚪 Logout</button>
+    </div>
+
+    <!-- Report Disaster (General User Panel) -->
+    <div id="report-disaster" class="hidden card-bg p-6 rounded-xl shadow-lg mb-6">
+        <h3 class="text-xl font-semibold mb-4 text-gray-200">Submit New Incident Report</h3>
+        <label class="flex items-center space-x-2 text-red-400 font-bold mb-3">
+            <input type="checkbox" id="is_emergency_report" class="form-checkbox h-5 w-5 text-red-600 rounded"> 
+            <span>Mark as CRITICAL EMERGENCY</span>
+        </label>
+        
+        <input id="report_location" class="w-full p-2 mb-3 rounded" placeholder="Exact Location (City, Street, Landmark)"/>
+        <input id="report_type" class="w-full p-2 mb-3 rounded" placeholder="Disaster Type (e.g., Fire, Flood, Medical)"/>
+        <input id="report_supplies" class="w-full p-2 mb-3 rounded" placeholder="Amenities/Supplies Needed (e.g., Water, Blankets)"/>
+        <input id="report_severity" type="number" min="1" max="10" class="w-full p-2 mb-3 rounded" placeholder="Severity (1-10)"/>
+        <input id="report_volunteers_needed" type="number" min="1" class="w-full p-2 mb-3 rounded" placeholder="Personnel Needed"/>
+        <textarea id="report_description" class="w-full p-2 mb-4 rounded h-20" placeholder="Detailed Description of the Situation"></textarea>
+        
+        <label class="block text-sm font-medium text-gray-400 mb-2">Proof Photo of Incident (Mandatory):</label>
+        <input type="file" id="report_photo_input" accept="image/*" class="w-full p-2 mb-4 rounded"/>
+
+        <button onclick="doReport()" class="btn-primary hover:bg-blue-600 text-white font-bold py-2 px-4 rounded w-full">Submit Verified Report</button>
+        <div id="report-msg" class="text-sm mt-3 text-green-400"></div>
+    </div>
+    
+    <!-- Volunteer HUB (New Panel) -->
+    <div id="volunteer-hub" class="hidden card-bg p-6 rounded-xl shadow-lg mb-6">
+        <h3 class="text-xl font-semibold mb-4 text-gray-200">Mission Control Hub</h3>
+        
+        <!-- Assignment & Team Details -->
+        <div id="volunteer-details" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <!-- Details will be dynamically inserted here -->
+        </div>
+        
+        <!-- Admin Deployment Message -->
+        <div id="admin-message-card" class="bg-indigo-900 bg-opacity-30 p-4 rounded-lg border border-indigo-700 mb-6 hidden">
+             <h4 class="font-bold mb-2 text-indigo-300 flex items-center">
+                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                 Deployment Message
+             </h4>
+             <p id="admin-message-content" class="text-sm text-indigo-200"></p>
+        </div>
+
+
+        <!-- Situation Update Form (Messaging back to Admin) -->
+        <div class="bg-gray-800 p-4 rounded-lg border border-gray-700">
+            <h4 class="font-bold mb-3 text-gray-300">Send Situation Update to Admin</h4>
+            <select id="update_priority" class="w-full p-2 mb-3 rounded">
+                <option value="Normal">Normal Update (Progress)</option>
+                <option value="Crisis">Crisis (Need more help/immediate resource)</option>
+                <option value="Casualty">Casualty Report (URGENT - Requires Admin Action)</option>
+            </select>
+            <textarea id="update_description" class="w-full p-2 mb-3 rounded h-24" placeholder="Detailed Situation Report (Current Status, Casualties, Specific Resource Demand)"></textarea>
+            
+            <label class="block text-sm font-medium text-gray-400 mb-2">Proof Photo/Update Photo (Optional):</label>
+            <input type="file" id="update_photo_input" accept="image/*" class="w-full p-2 mb-4 rounded"/>
+
+            <button onclick="doSendUpdate()" class="btn-primary hover:bg-blue-600 text-white py-2 px-4 rounded w-full">Submit Update</button>
+            <div id="update-msg" class="text-sm mt-3 text-green-400"></div>
+        </div>
+    </div>
+
+
+    <!-- View Disasters (Same for all, but filtered for reporters/volunteers) -->
+    <div id="view" class="hidden card-bg p-6 rounded-xl shadow-lg mb-6">
+        <h3 id="disaster-view-title" class="text-xl font-semibold mb-4 text-gray-200">Active Disasters (Sorted by Urgency)</h3>
+        
+        <div class="flex justify-end mb-4">
+            <button onclick="loadDisasters()" class="bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded text-sm">Refresh Disaster List</button>
+        </div>
+
+        <p id="filter-note" class="text-xs text-red-400 mb-4">Note: All active reports are displayed here, prioritized instantly by the emergency status and severity.</p>
+        <div id="disaster-list" class="space-y-4"></div>
+    </div>
+
+    <!-- Volunteer Status (Restricted to Admin) -->
+    <div id="locations" class="hidden card-bg p-6 rounded-xl shadow-lg mb-6">
+        <h3 class="text-xl font-semibold mb-4 text-gray-200">Volunteer Resource Status</h3>
+        <div id="vol-list" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+    </div>
+
+    <!-- Admin Panel -->
+    <div id="admin" class="hidden card-bg p-6 rounded-xl shadow-lg mb-6">
+        <h3 class="text-xl font-semibold mb-4 text-gray-200">Assignment & Resolution</h3>
+        <div class="space-y-4">
+            <select id="admin_disaster_select" class="w-full p-2 border rounded">
+                <option value="">-- Select Disaster ID to Act On --</option>
+            </select>
+
+            <!-- Deployment Message Input -->
+            <textarea id="deployment_message_input" class="w-full p-2 border rounded h-16" placeholder="Deployment message for assigned volunteers (e.g., 'Go to Sector 4 and check for structural damage.')"></textarea>
+            
+            <div class="bg-gray-800 p-4 rounded-lg shadow-inner border border-gray-700">
+                <h4 class="font-medium mb-2 text-gray-300">Personnel Allocation</h4>
+                <select id="admin_volunteer_select" class="w-full p-2 mb-3 rounded">
+                    <option value="">-- Select Available Personnel --</option>
+                </select>
+                <button onclick="doAssign()" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded">Assign Manually</button>
+                <button onclick="doAutoAssign()" class="bg-indigo-500 hover:bg-indigo-600 text-white py-2 px-4 rounded">Auto-Assign Best Fit</button>
+            </div>
+            
+            <!-- Resolution Verification Section -->
+            <div class="bg-red-900 bg-opacity-30 p-4 rounded-lg shadow-inner border border-red-700">
+                <h4 class="font-bold mb-2 text-red-300">Resolution Verification (Proof Required)</h4>
+                <label class="block text-sm font-medium text-gray-300 mb-2">Proof Photo of Resolution (Mandatory):</label>
+                <input type="file" id="resolution_photo_input" accept="image/*" class="w-full p-2 mb-3 rounded"/>
+
+                <button onclick="doResolve()" class="btn-danger hover:bg-red-700 text-white py-2 px-4 rounded w-full">Mark as RESOLVED & Verify</button>
+            </div>
+            
+            <!-- Admin's View of Volunteer Updates -->
+            <div class="bg-gray-800 p-4 rounded-xl border border-gray-700">
+                <h4 class="font-medium mb-2 text-gray-300">Live Volunteer Updates</h4>
+                <div id="volunteer-updates-admin" class="text-sm text-gray-400">
+                    Select a disaster above to view real-time updates.
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+</main>
+
+<script>
+
+const API_BASE = window.location.origin; 
+let CURRENT_USER=null;
+let DISASTER_DATA = [];
+let VOLUNTEER_DATA = [];
+
+function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+        reader.readAsDataURL(file);
+    });
+}
+
+// --- Utility Functions ---
+
+function isVolunteer(username) { return username.startsWith("v"); }
+function isAdmin(username) { return username === "admin"; }
+function isReporter(username) { return username.startsWith("user"); }
+
+function displayUpdates(updates) {
+    const container = document.getElementById('volunteer-updates-admin');
+    if (!updates || updates.length === 0) {
+        container.innerHTML = `<p class="text-gray-500">No updates received for this incident yet.</p>`;
+        return;
+    }
+
+    container.innerHTML = updates.reverse().map(u => {
+        const badgeClass = u.priority === 'Casualty' ? 'update-casualty' : (u.priority === 'Crisis' ? 'update-crisis' : 'bg-gray-700 text-gray-300');
+        return `
+            <div class="p-3 mb-2 rounded-lg ${badgeClass} border border-gray-700">
+                <div class="flex justify-between text-xs font-bold mb-1">
+                    <span>FROM: ${u.volunteer_id}</span>
+                    <span class="px-2 py-0.5 rounded-full bg-red-800 text-white">${u.priority}</span>
+                </div>
+                <p class="text-sm">${u.description}</p>
+                <p class="text-xs text-gray-400 mt-1">TIME: ${u.timestamp}</p>
+                ${u.update_photo ? `<img src="${u.update_photo}" class="w-1/3 h-16 object-cover rounded mt-2" alt="Update Proof">` : ''}
+            </div>
+        `;
+    }).join('');
+}
+
+// Event listener for disaster selection in Admin Panel
+document.getElementById('admin_disaster_select').addEventListener('change', (e) => {
+    const disasterId = parseInt(e.target.value);
+    if (disasterId) {
+        const disaster = DISASTER_DATA.find(d => d.id === disasterId);
+        if (disaster) {
+            displayUpdates(disaster.updates);
+        }
+    } else {
+        document.getElementById('volunteer-updates-admin').innerHTML = 'Select a disaster above to view real-time updates.';
+    }
+});
+
+
+// --- Authentication and View Control ---
+
+function doLogin(){
+    const u=document.getElementById("username").value;
+    const p=document.getElementById("password").value;
+    fetch(API_BASE+"/api/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:u,password:p})})
+    .then(r=>r.json()).then(j=>{
+        if(j.success){
+            // Store the entire object for consistency, though only username is strictly needed here
+            CURRENT_USER=j; 
+            document.getElementById("login-section").classList.add('hidden');
+            document.getElementById("app-section").classList.remove('hidden');
+            
+            // Hide all specialized buttons initially
+            document.getElementById("admin-btn").classList.add('hidden');
+            document.getElementById("locations-btn").classList.add('hidden'); 
+            document.getElementById("report-btn").classList.add('hidden');
+            document.getElementById("vol-hub-btn").classList.add('hidden');
+
+            if(isAdmin(CURRENT_USER.username)){
+                document.getElementById("admin-btn").classList.remove('hidden');
+                document.getElementById("locations-btn").classList.remove('hidden'); 
+                show('admin'); 
+            } else if (isVolunteer(CURRENT_USER.username)) {
+                document.getElementById("vol-hub-btn").classList.remove('hidden');
+                sendLocation(CURRENT_USER.username);
+                show('volunteer-hub'); 
+            } else if (isReporter(CURRENT_USER.username)) {
+                document.getElementById("report-btn").classList.remove('hidden');
+                show('report-disaster');
+            }
+            
+        } else {
+            document.getElementById("login-msg").innerText=j.message||"Login failed";
+        }
+    });
+}
+
+function logout(){
+    CURRENT_USER=null;
+    document.getElementById("app-section").classList.add('hidden');
+    document.getElementById("login-section").classList.remove('hidden');
+}
+
+function show(id){
+    ['view','locations','admin','report-disaster', 'volunteer-hub'].forEach(x=>document.getElementById(x).classList.add('hidden'));
+    document.getElementById(id).classList.remove('hidden');
+    
+    if (id === 'admin' && !isAdmin(CURRENT_USER.username)) {
+        console.error("Access Denied: Non-admin tried to access admin panel.");
+        show('view');
+        return;
+    }
+    if (id === 'volunteer-hub' && !isVolunteer(CURRENT_USER.username)) {
+        console.error("Access Denied: Non-volunteer tried to access volunteer hub.");
+        show('view');
+        return;
+    }
+
+    if(id==='view') loadDisasters();
+    if(id==='locations') loadVolunteersAndLocations();
+    if(id==='admin') loadAdminData();
+    if(id==='volunteer-hub') loadVolunteerHubData();
+}
+
+function sendLocation(volunteerId){
+    if(navigator.geolocation){
+        navigator.geolocation.getCurrentPosition((pos)=>{
+            fetch(API_BASE+"/api/location",{
+                method:"POST",
+                headers:{"Content-Type":"application/json"},
+                body:JSON.stringify({
+                    volunteer_id: volunteerId,
+                    lat: pos.coords.latitude.toFixed(4),
+                    lon: pos.coords.longitude.toFixed(4),
+                    timestamp: new Date().toLocaleTimeString()
+                })
+            });
+        }, (err) => {
+            console.warn(`Geolocation Error(${err.code}): ${err.message}`);
+        });
+    }
+    // Note: This location send loop keeps running while the app is open for the volunteer
+    setTimeout(()=>sendLocation(volunteerId), 5000); 
+}
+
+
+// --- Volunteer Specific Logic (New) ---
+
+async function loadVolunteerHubData() {
+    // 1. Ensure latest data is loaded
+    await loadDisasters(); 
+    await loadVolunteersAndLocations(); 
+
+    const volId = CURRENT_USER.username;
+    const currentVol = VOLUNTEER_DATA.find(v => v.id === volId);
+    
+    const detailsDiv = document.getElementById('volunteer-details');
+    const assignedDisaster = currentVol?.assigned_to 
+        ? DISASTER_DATA.find(d => d.id === currentVol.assigned_to) 
+        : null;
+
+    // Display Admin Message
+    const adminMessageCard = document.getElementById('admin-message-card');
+    const adminMessageContent = document.getElementById('admin-message-content');
+    if (currentVol?.admin_message) {
+        adminMessageContent.innerText = currentVol.admin_message;
+        adminMessageCard.classList.remove('hidden');
+    } else {
+        adminMessageCard.classList.add('hidden');
+    }
+
+    let assignmentHtml;
+    let teamHtml = '';
+
+    if (assignedDisaster) {
+        const coPartners = assignedDisaster.assigned_volunteers.filter(id => id !== volId);
+        teamHtml = `<div class="card-bg p-3 rounded-lg">
+            <p class="font-semibold text-gray-300 mb-1">Team Mates (${coPartners.length})</p>
+            <p class="text-sm text-gray-400">${coPartners.length > 0 ? coPartners.join(', ') : 'No co-partners assigned.'}</p>
+        </div>`;
+        
+        assignmentHtml = `<div class="card-bg p-3 rounded-lg col-span-2 border-l-4 border-blue-400">
+            <p class="font-bold text-lg text-blue-300">Active Mission: ID ${assignedDisaster.id}</p>
+            <p class="text-md text-gray-200">${assignedDisaster.type} at ${assignedDisaster.location}</p>
+            <p class="text-sm text-gray-400 mt-1">Needs: ${assignedDisaster.supplies_needed || 'General'} | Sev: ${assignedDisaster.severity}</p>
+            <a href="#" onclick="show('view')" class="text-xs text-blue-400 underline mt-2 inline-block">View Full Details</a>
+        </div>`;
+    } else {
+        assignmentHtml = `<div class="card-bg p-3 rounded-lg col-span-3 border-l-4 border-yellow-400">
+            <p class="font-bold text-lg text-yellow-300">Status: Unassigned</p>
+            <p class="text-sm text-gray-400">Ready for deployment. Wait for assignment from Admin.</p>
+        </div>`;
+    }
+    
+    detailsDiv.innerHTML = `
+        <div class="card-bg p-3 rounded-lg border-l-4 border-green-400">
+            <p class="font-bold text-gray-300">${currentVol.name} (${currentVol.id})</p>
+            <p class="text-sm text-gray-400">${currentVol.group}</p>
+            <p class="text-xs text-gray-500 mt-2">Last Loc: ${currentVol.location_data.lat}/${currentVol.location_data.lon}</p>
+        </div>
+        ${teamHtml}
+        ${assignmentHtml}
+    `;
+
+    // Disable update form if unassigned
+    const updateContainer = document.querySelector('#volunteer-hub .bg-gray-800');
+    if (!assignedDisaster) {
+        updateContainer.style.opacity = 0.5;
+        updateContainer.querySelector('h4').innerText = "Send Situation Update (Currently Unassigned)";
+        updateContainer.querySelectorAll('input, textarea, select, button').forEach(el => el.disabled = true);
+    } else {
+        updateContainer.style.opacity = 1;
+        updateContainer.querySelector('h4').innerText = `Send Situation Update for ID ${assignedDisaster.id}`;
+        updateContainer.querySelectorAll('input, textarea, select, button').forEach(el => el.disabled = false);
+    }
+}
+
+async function doSendUpdate() {
+    const volId = CURRENT_USER.username;
+    const priority = document.getElementById("update_priority").value;
+    const description = document.getElementById("update_description").value;
+    const photoInput = document.getElementById("update_photo_input");
+    
+    // Get the assigned disaster ID
+    const currentVol = VOLUNTEER_DATA.find(v => v.id === volId);
+    const assignedDisasterId = currentVol?.assigned_to;
+
+    if (!description) {
+        document.getElementById("update-msg").innerText = "Error: Description is mandatory for updates.";
+        return;
+    }
+    if (!assignedDisasterId) {
+        document.getElementById("update-msg").innerText = "Error: You are not currently assigned to a mission.";
+        return;
+    }
+
+    document.getElementById("update-msg").innerText = "Sending update...";
+    
+    let updatePhotoBase64 = null;
+    if (photoInput.files.length > 0) {
+        updatePhotoBase64 = await fileToBase64(photoInput.files[0]);
+    }
+
+    const res = await fetch(API_BASE + "/api/volunteer-update", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            disaster_id: assignedDisasterId,
+            volunteer_id: volId,
+            priority: priority,
+            description: description,
+            update_photo: updatePhotoBase64
+        })
+    });
+    
+    const j = await res.json(); 
+
+    if (j.success) {
+        document.getElementById("update-msg").innerText = `Update sent successfully! Priority: ${priority}. Admin Notified.`;
+        document.getElementById("update_description").value = "";
+        document.getElementById("update_photo_input").value = "";
+    } else {
+        document.getElementById("update-msg").innerText = j.error || "Error sending update. Check console.";
+    }
+}
+
+
+// --- Disaster Reporting, Deletion, and Viewing ---
+
+async function doReport() {
+    const isEmergency = document.getElementById("is_emergency_report").checked;
+    const type = document.getElementById("report_type").value;
+    const severity = document.getElementById("report_severity").value;
+    const volunteers_needed = document.getElementById("report_volunteers_needed").value;
+    const description = document.getElementById("report_description").value;
+    const location = document.getElementById("report_location").value;
+    const supplies_needed = document.getElementById("report_supplies").value;
+    const photoInput = document.getElementById("report_photo_input");
+    
+    if (!type || !description || !location || photoInput.files.length === 0) {
+        document.getElementById("report-msg").innerText = "Error: Type, Description, Location, and Proof Photo are MANDATORY.";
+        return;
+    }
+    
+    document.getElementById("report-msg").innerText = "Uploading proof photo...";
+    
+    const reportPhotoBase64 = await fileToBase64(photoInput.files[0]);
+
+    const res = await fetch(API_BASE+"/api/report",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+            type: type,
+            severity: severity,
+            is_emergency: isEmergency ? "true" : "false",
+            volunteers_needed: volunteers_needed,
+            supplies_needed: supplies_needed,
+            description: description,
+            reported_by: CURRENT_USER.username,
+            location: location,
+            supplies_needed: supplies_needed,
+            report_photo: reportPhotoBase64
+        })
+    });
+    const j = await res.json();
+    
+    if (j.message) {
+        document.getElementById("report-msg").innerText = j.message + " You can now check the status in the 'View Disaster Status' panel.";
+    } else {
+        document.getElementById("report-msg").innerText = j.error || "An unknown error occurred during report submission.";
+    }
+
+    document.getElementById("report_description").value = "";
+    document.getElementById("report_photo_input").value = "";
+    document.getElementById("report_location").value = "";
+    document.getElementById("report_type").value = "";
+    document.getElementById("report_supplies").value = "";
+    document.getElementById("report_severity").value = "";
+    document.getElementById("report_volunteers_needed").value = "";
+}
+
+// --- NEW: Deletion Function (FIXED to avoid window.confirm) ---
+async function doDeleteDisaster(disasterId) {
+    if (!isReporter(CURRENT_USER.username)) return alert("Access denied. Only the reporter can delete their own reports."); 
+    
+    // Using alert as confirmation placeholder, as requested
+    if (!alert(`WARNING: You are about to DELETE Disaster ID ${disasterId}. This report MUST be in 'Pending' status. This action cannot be undone.`)) {
+   
+    }
+
+    const res = await fetch(API_BASE + "/api/delete-disaster", {
+        method: "POST", 
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            disaster_id: disasterId,
+            reporter_id: CURRENT_USER.username
+        })
+    });
+    const j = await res.json();
+    
+    if (j.success) {
+        alert(j.message);
+        // Refresh the list immediately after successful deletion
+        loadDisasters();
+    } else {
+        alert(j.error || "Failed to delete report.");
+    }
+}
+
+
+async function loadDisasters(){
+    let url = API_BASE+"/api/view";
+    const isRep = isReporter(CURRENT_USER.username);
+    
+    // STEP 1: Implement Reporter Filtering (CRITICAL CHANGE)
+    if (isRep) {
+        // Reporters only see reports they submitted, by passing their ID as a query parameter
+        url += `?reporter_id=${CURRENT_USER.username}`; 
+    }
+
+    const res = await fetch(url);
+    const allDisasters = await res.json();
+    
+    DISASTER_DATA = allDisasters;
+    let filteredDisasters = allDisasters;
+    
+    const isVol = isVolunteer(CURRENT_USER.username);
+    
+    // STEP 2: Handle Volunteer Filtering (Assignment View)
+    if (isVol) {
+        const volRes = await fetch(API_BASE + "/api/volunteers");
+        const allVols = await volRes.json();
+        const currentVol = allVols.find(v => v.id === CURRENT_USER.username);
+        
+        if (currentVol && currentVol.assigned_to) {
+            // Filter down to the single assigned disaster
+            filteredDisasters = allDisasters.filter(d => d.id === currentVol.assigned_to);
+            document.getElementById('disaster-view-title').innerText = `Your Current Assignment (ID: ${currentVol.assigned_to})`;
+            document.getElementById('filter-note').innerText = "Note: You are currently viewing the incident you are assigned to. Click 'Mission Hub' for detailed mission info.";
+        } else {
+            // If volunteer is unassigned, show ALL disasters (as they are potential candidates)
+            document.getElementById('disaster-view-title').innerText = "All Active Disasters (No Current Assignment)";
+            document.getElementById('filter-note').innerText = "Note: You are currently unassigned. All active reports are shown, prioritized by urgency.";
+        }
+    } else if (isRep) {
+        // Reporter viewing their own reports (filtered by API call)
+        document.getElementById('disaster-view-title').innerText = `Your Submitted Reports (${CURRENT_USER.username})`;
+        document.getElementById('filter-note').innerText = "Note: You are only viewing reports submitted by you.";
+    } else {
+        // Admin viewing all reports
+        document.getElementById('disaster-view-title').innerText = "All Active Disasters (Sorted by Urgency)";
+        document.getElementById('filter-note').innerText = "Note: All active reports are displayed here, prioritized instantly by the emergency status and severity.";
+    }
+
+
+    // 3. Render the full list 
+    document.getElementById("disaster-list").innerHTML=filteredDisasters.map(d=> {
+        
+        const showDelete = isRep && d.reported_by === CURRENT_USER.username && d.status === 'Pending';
+        
+        return `<div class="card-bg p-4 rounded-lg border-l-4 ${d.priority_type === 'Emergency' ? 'border-red-500' : 'border-blue-500'} shadow-sm">
+        <div class="flex justify-between items-start mb-2">
+            <div>
+                <h4 class="text-lg font-bold text-gray-100">${d.id}: ${d.type} at ${d.location}</h4>
+                <p class="text-xs text-gray-400">Reported by: ${d.reported_by} at ${d.timestamp}</p>
+            </div>
+            <div class="space-x-1 flex-shrink-0 flex items-center">
+                ${showDelete ? `<button onclick="doDeleteDisaster(${d.id})" class="text-xs bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded-full mr-2">❌ Delete</button>` : ''}
+                <span class="inline-block text-xs font-semibold px-2 py-0.5 rounded-full text-white badge-${d.priority_type.toLowerCase()}">
+                    ${d.priority_type === 'Emergency' ? 'URGENT' : 'Standard'} (Sev: ${d.severity})
+                </span>
+                <span class="inline-block text-xs font-semibold px-2 py-0.5 rounded-full text-white badge-${d.status.toLowerCase()}">
+                    ${d.status}
+                </span>
+            </div>
+        </div>
+        <p class="text-sm text-gray-300">${d.description}</p>
+        <div class="mt-2 text-xs text-gray-400 flex justify-between">
+            <span>Supplies Needed: <strong>${d.supplies_needed || 'None'}</strong></span>
+            <span>Personnel Assigned: ${d.assignedCount}/${d.volunteers_needed}</span>
+        </div>
+        
+        <div class="mt-3 pt-3 border-t border-gray-700 grid grid-cols-2 gap-4">
+            <div>
+                <p class="text-xs font-semibold text-gray-300">User Report Proof:</p>
+                ${d.report_photo ? `<img src="${d.report_photo}" class="w-full h-24 object-cover rounded mt-1 shadow" alt="Incident Proof">` : `<p class="text-xs text-red-400 mt-1">No proof photo provided.</p>`}
+            </div>
+            <div>
+                <p class="text-xs font-semibold text-gray-300">Resolution Proof:</p>
+                ${d.resolution_photo ? `<img src="${d.resolution_photo}" class="w-full h-24 object-cover rounded mt-1 shadow" alt="Resolution Proof">` : `<p class="text-xs text-blue-400 mt-1">Pending Resolution.</p>`}
+            </div>
+        </div>
+
+        <div class="mt-2 pt-2 border-t border-gray-700 text-xs text-gray-500">
+            Assigned Personnel: ${d.assigned_volunteers.length > 0 ? d.assigned_volunteers.join(', ') : 'None'}
+        </div>
+    </div>`;
+    }).join('');
+}
+
+async function loadVolunteersAndLocations(){
+    const res = await fetch(API_BASE+"/api/volunteers");
+    VOLUNTEER_DATA = await res.json();
+    
+    document.getElementById("vol-list").innerHTML = VOLUNTEER_DATA.map(v=>`
+        <div class="vol-card card-bg p-4 rounded-lg shadow-md border-t-4 ${v.is_available ? 'border-green-400' : 'border-yellow-400'}">
+            <h4 class="font-bold text-gray-100">${v.id} - ${v.name}</h4>
+            <p class="text-sm text-gray-400 mb-2">${v.group}</p>
+            <span class="text-xs font-semibold px-2 py-0.5 rounded-full text-white badge-${v.is_available ? 'resolved' : 'pending'}">
+                ${v.is_available ? 'Available' : `Busy (${v.assigned_to})`}
+            </span>
+            <div class="mt-3 pt-3 border-t border-gray-700 text-xs text-gray-500">
+                <p class="font-medium text-gray-300">Live Status</p>
+                <p>Lat/Lon: ${v.location_data.lat} / ${v.location_data.lon}</p>
+                <p>Last Update: <strong>${v.location_data.timestamp}</strong></p>
+            </div>
+        </div>
+    `).join('');
+}
+
+
+async function loadAdminData(){
+    if (!isAdmin(CURRENT_USER.username)) {
+        console.error("Access Denied: Non-admin tried to load admin data.");
+        show('view');
+        return;
+    }
+
+    await loadDisasters();
+    await loadVolunteersAndLocations();
+    
+    const dSelect = document.getElementById("admin_disaster_select");
+    dSelect.innerHTML = '<option value="">-- Select Disaster ID to Act On --</option>' + DISASTER_DATA
+        .filter(d => d.status !== 'Resolved')
+        .map(d => `<option value="${d.id}">${d.id} - ${d.type} (Needs: ${d.volunteers_needed - d.assignedCount})</option>`).join('');
+    
+    const vSelect = document.getElementById("admin_volunteer_select");
+    vSelect.innerHTML = '<option value="">-- Select Available Personnel --</option>' + VOLUNTEER_DATA
+        .filter(v => v.is_available)
+        .map(v => `<option value="${v.id}">${v.id} - ${v.name} (${v.group})</option>`).join('');
+    
+    // Clear and reset updates display
+    document.getElementById('volunteer-updates-admin').innerHTML = 'Select a disaster above to view real-time updates.';
+}
+
+async function doAssign(){
+    const did = document.getElementById("admin_disaster_select").value;
+    const vid = document.getElementById("admin_volunteer_select").value;
+    const deploymentMessage = document.getElementById("deployment_message_input").value;
+
+    if(!did || !vid) return alert("Select a disaster and an available volunteer.");
+    
+    const res = await fetch(API_BASE+"/api/assign",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+            disaster_id: parseInt(did), 
+            volunteer_id: vid,
+            deployment_message: deploymentMessage || "Deployment initiated. Proceed with caution."
+        })
+    });
+    const j = await res.json();
+    alert(j.message || j.error);
+    loadAdminData();
+}
+
+async function doAutoAssign(){
+    const did = document.getElementById("admin_disaster_select").value;
+    const deploymentMessage = document.getElementById("deployment_message_input").value;
+
+    if(!did) return alert("Select a disaster.");
+    
+    const res = await fetch(API_BASE+"/api/auto-assign",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+            disaster_id: parseInt(did),
+            deployment_message: deploymentMessage || "Auto-Deployment initiated. Proceed with caution."
+        })
+    });
+    const j = await res.json();
+    alert(j.message || j.error);
+    loadAdminData();
+}
+
+async function doResolve(){
+    const did = document.getElementById("admin_disaster_select").value;
+    const photoInput = document.getElementById("resolution_photo_input");
+    
+    if(!did) return alert("Select a disaster to resolve.");
+    if(photoInput.files.length === 0) return alert("Resolution requires a proof photo.");
+    
+    // Confirmation replaced by a simple warning/alert check
+    if (!alert(`ALERT: You are about to mark Disaster ID ${did} as RESOLVED. This will free up assigned volunteers.`)) {
+        
+    }
+    
+    const resolutionPhotoBase64 = await fileToBase64(photoInput.files[0]);
+
+    const res = await fetch(API_BASE+"/api/resolve",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+            disaster_id: parseInt(did),
+            resolution_photo: resolutionPhotoBase64,
+        })
+    });
+    const j = await res.json();
+    alert(j.message || j.error);
+    
+    document.getElementById("resolution_photo_input").value = "";
+    loadAdminData();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Page starts at login screen, avoiding the initial "Failed to fetch" error.
+});
+</script>
+</body>
+</html>

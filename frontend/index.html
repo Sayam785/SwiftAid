@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>SwiftAid - Disaster Management V2</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root {
+  --primary-color: #1f2937;
+  --accent-color: #3b82f6;
+  --bg-color: #111827;
+  --card-bg: #1f2937;
+  --vol-bg: #22c55e;
+}
+body { background-color: var(--bg-color); color: #f9fafb; font-family: Inter, sans-serif; }
+.header-bg { background-color: var(--primary-color); border-bottom: 2px solid var(--accent-color); }
+.card-bg { background-color: var(--card-bg); border: 1px solid rgba(55, 65, 81, 0.5); }
+input, textarea, select { background-color: #374151; color: #f9fafb; border: 1px solid #4b5563; }
+input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent-color); }
+button.btn-primary { background-color: var(--accent-color); }
+button.btn-danger { background-color: #ef4444; }
+.btn-vol { background-color: var(--vol-bg); }
+.badge-pending { background-color: #d97706; }
+.badge-inprogress { background-color: #1d4ed8; }
+.badge-resolved { background-color: #10b981; }
+.badge-emergency { background-color: #ef4444; animation: pulse 1s infinite alternate;}
+.badge-normal { background-color: #3b82f6; }
+@keyframes pulse { from { transform: scale(1); } to { transform: scale(1.05); } }
+.vol-card { transition: transform 0.2s; }
+.vol-card:hover { transform: translateY(-3px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3); }
+.update-crisis { background-color: #fca5a5; color: #7f1d1d; }
+.update-casualty { background-color: #f87171; color: #7f1d1d; animation: pulse 0.5s infinite alternate; }
+</style>
+</head>
+<body class="font-sans">
+<header class="header-bg text-white p-4 text-center">
+  <h1 class="text-3xl font-bold">🌍 SwiftAid - Command & Control System</h1>
+</header>
+<main class="max-w-6xl mx-auto p-4">
+
+<!-- Login Section -->
+<section id="login-section" class="card-bg p-6 rounded-xl shadow-lg mb-6">
+  <h2 class="text-xl font-semibold mb-4 text-gray-200">Login</h2>
+  <input id="username" class="w-full p-2 mb-3 border rounded" placeholder="username (admin / user1-10 / v101-120)"/>
+  <input id="password" type="password" class="w-full p-2 mb-4 border rounded" placeholder="password"/>
+  <button onclick="doLogin()" class="btn-primary hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition duration-150 w-full">Login</button>
+  <div id="login-msg" class="text-sm mt-3 text-red-400"></div>
+</section>
+
+<!-- Main App Section -->
+<section id="app-section" class="hidden">
+  <!-- Main Menu -->
+  <div id="main-menu" class="flex space-x-2 mb-4">
+    <button onclick="show('view')" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition duration-150">📋 View Priority Status</button>
+    <button id="report-btn" onclick="show('report-disaster')" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded transition duration-150 hidden">🚨 Send New Report</button>
+    <button id="vol-hub-btn" onclick="show('volunteer-hub')" class="btn-vol hover:bg-green-600 text-white font-bold py-2 px-4 rounded transition duration-150 hidden">🧑‍🚒 Mission Hub</button>
+    <button id="locations-btn" onclick="show('locations')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded transition duration-150 hidden">🧑‍💻 Volunteer Locations</button>
+    <button id="admin-btn" onclick="show('admin')" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded transition duration-150 hidden">⚙️ Management Panel</button>
+    <button onclick="logout()" class="btn-danger hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition duration-150">🚪 Logout</button>
+  </div>
+
+  <!-- Sections -->
+  <div id="view" class="hidden card-bg p-6 rounded-xl shadow-lg mb-6">
+    <h3 id="disaster-view-title" class="text-xl font-semibold mb-4 text-gray-200">Active Disasters (Sorted by Urgency)</h3>
+    <div class="flex justify-end mb-4">
+      <button onclick="loadDisasters()" class="bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded text-sm">Refresh Disaster List</button>
+    </div>
+    <p id="filter-note" class="text-xs text-red-400 mb-4">Note: All active reports are displayed here, prioritized instantly by the emergency status and severity.</p>
+    <div id="disaster-list" class="space-y-4"></div>
+  </div>
+
+  <div id="report-disaster" class="hidden card-bg p-6 rounded-xl shadow-lg mb-6">
+    <h3 class="text-xl font-semibold mb-4 text-gray-200">Submit New Incident Report</h3>
+    <label class="flex items-center space-x-2 text-red-400 font-bold mb-3">
+      <input type="checkbox" id="is_emergency_report" class="form-checkbox h-5 w-5 text-red-600 rounded"> 
+      <span>Mark as CRITICAL EMERGENCY</span>
+    </label>
+    <input id="report_location" class="w-full p-2 mb-3 rounded" placeholder="Exact Location"/>
+    <input id="report_type" class="w-full p-2 mb-3 rounded" placeholder="Disaster Type"/>
+    <input id="report_supplies" class="w-full p-2 mb-3 rounded" placeholder="Supplies Needed"/>
+    <input id="report_severity" type="number" min="1" max="10" class="w-full p-2 mb-3 rounded" placeholder="Severity"/>
+    <input id="report_volunteers_needed" type="number" min="1" class="w-full p-2 mb-3 rounded" placeholder="Personnel Needed"/>
+    <textarea id="report_description" class="w-full p-2 mb-4 rounded h-20" placeholder="Description"></textarea>
+    <label class="block text-sm font-medium text-gray-400 mb-2">Proof Photo:</label>
+    <input type="file" id="report_photo_input" accept="image/*" class="w-full p-2 mb-4 rounded"/>
+    <button onclick="doReport()" class="btn-primary hover:bg-blue-600 text-white font-bold py-2 px-4 rounded w-full">Submit Report</button>
+    <div id="report-msg" class="text-sm mt-3 text-green-400"></div>
+  </div>
+
+  <!-- Volunteer Hub -->
+  <div id="volunteer-hub" class="hidden card-bg p-6 rounded-xl shadow-lg mb-6">
+    <h3 class="text-xl font-semibold mb-4 text-gray-200">Mission Control Hub</h3>
+    <div id="volunteer-details" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6"></div>
+    <div id="admin-message-card" class="bg-indigo-900 bg-opacity-30 p-4 rounded-lg border border-indigo-700 mb-6 hidden">
+      <h4 class="font-bold mb-2 text-indigo-300 flex items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+        Deployment Message
+      </h4>
+      <p id="admin-message-content" class="text-sm text-indigo-200"></p>
+    </div>
+    <div class="bg-gray-800 p-4 rounded-lg border border-gray-700">
+      <h4 class="font-bold mb-3 text-gray-300">Send Situation Update to Admin</h4>
+      <select id="update_priority" class="w-full p-2 mb-3 rounded">
+        <option value="Normal">Normal Update</option>
+        <option value="Crisis">Crisis</option>
+        <option value="Casualty">Casualty</option>
+      </select>
+      <textarea id="update_description" class="w-full p-2 mb-3 rounded h-24" placeholder="Detailed Report"></textarea>
+      <label class="block text-sm font-medium text-gray-400 mb-2">Photo (Optional):</label>
+      <input type="file" id="update_photo_input" accept="image/*" class="w-full p-2 mb-4 rounded"/>
+      <button onclick="doSendUpdate()" class="btn-primary hover:bg-blue-600 text-white py-2 px-4 rounded w-full">Submit Update</button>
+      <div id="update-msg" class="text-sm mt-3 text-green-400"></div>
+    </div>
+  </div>
+
+  <!-- Admin Section -->
+  <div id="admin" class="hidden card-bg p-6 rounded-xl shadow-lg mb-6">
+    <h3 class="text-xl font-semibold mb-4 text-gray-200">Assignment & Resolution</h3>
+    <select id="admin_disaster_select" class="w-full p-2 border rounded mb-3">
+      <option value="">-- Select Disaster ID --</option>
+    </select>
+    <textarea id="deployment_message_input" class="w-full p-2 border rounded h-16 mb-3" placeholder="Deployment message"></textarea>
+    <select id="admin_volunteer_select" class="w-full p-2 mb-3 rounded">
+      <option value="">-- Select Volunteer --</option>
+    </select>
+    <button onclick="doAssign()" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded mb-2">Assign Manually</button>
+    <button onclick="doAutoAssign()" class="bg-indigo-500 hover:bg-indigo-600 text-white py-2 px-4 rounded">Auto-Assign</button>
+    <div class="bg-red-900 bg-opacity-30 p-4 rounded-lg border border-red-700 mt-4">
+      <h4 class="font-bold mb-2 text-red-300">Resolution Verification</h4>
+      <input type="file" id="resolution_photo_input" accept="image/*" class="w-full p-2 mb-3 rounded"/>
+      <button onclick="doResolve()" class="btn-danger hover:bg-red-700 text-white py-2 px-4 rounded w-full">Mark as RESOLVED</button>
+    </div>
+    <div class="bg-gray-800 p-4 rounded-xl border border-gray-700 mt-4">
+      <h4 class="font-medium mb-2 text-gray-300">Live Volunteer Updates</h4>
+      <div id="volunteer-updates-admin" class="text-sm text-gray-400">Select a disaster above to view updates.</div>
+    </div>
+  </div>
+
+  <!-- Volunteer Status -->
+  <div id="locations" class="hidden card-bg p-6 rounded-xl shadow-lg mb-6">
+    <h3 class="text-xl font-semibold mb-4 text-gray-200">Volunteer Resource Status</h3>
+    <div id="vol-list" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+  </div>
+</section>
+</main>
+
+<script>
+// ------------- CONFIG -------------
+const API_BASE = window.location.origin;
+let CURRENT_USER = null;
+let DISASTER_DATA = [];
+let VOLUNTEER_DATA = [];
+
+// ------------- LOGIN UTILITY -------------
+function isVolunteer(u){ return u.startsWith("v"); }
+function isAdmin(u){ return u==="admin"; }
+function isReporter(u){ return u.startsWith("user"); }
+
+// ------------- LOGIN LOGIC -------------
+function doLogin(){
+  const u=document.getElementById("username").value;
+  const p=document.getElementById("password").value;
+  fetch(API_BASE+"/api/login", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({username:u,password:p})})
+    .then(r=>r.json()).then(j=>{
+      if(j.success){
+        CURRENT_USER=j;
+        document.getElementById("login-section").classList.add('hidden');
+        document.getElementById("app-section").classList.remove('hidden');
+        // Hide all role buttons
+        ["admin-btn","locations-btn","report-btn","vol-hub-btn"].forEach(id=>document.getElementById(id).classList.add('hidden'));
+        if(isAdmin(u)){ document.getElementById("admin-btn").classList.remove('hidden'); document.getElementById("locations-btn").classList.remove('hidden'); show('admin'); }
+        else if(isVolunteer(u)){ document.getElementById("vol-hub-btn").classList.remove('hidden'); sendLocation(u); show('volunteer-hub'); }
+        else if(isReporter(u)){ document.getElementById("report-btn").classList.remove('hidden'); show('report-disaster'); }
+      } else { document.getElementById("login-msg").innerText = j.message || "Login failed"; }
+  });
+}
+
+function logout(){ CURRENT_USER=null; document.getElementById("app-section").classList.add('hidden'); document.getElementById("login-section").classList.remove('hidden'); }
+function show(id){ ['view','locations','admin','report-disaster','volunteer-hub'].forEach(x=>document.getElementById(x).classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); 
+  if(id==='view') loadDisasters();
+  if(id==='locations') loadVolunteersAndLocations();
+  if(id==='admin') loadAdminData();
+  if(id==='volunteer-hub') loadVolunteerHubData();
+}
+
+// ------------- LOCATION TRACKING -------------
+function sendLocation(volunteerId){
+  if(navigator.geolocation){ navigator.geolocation.getCurrentPosition(pos=>{
+    fetch(API_BASE+"/api/location",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({volunteer_id:volunteerId,lat:pos.coords.latitude.toFixed(4),lon:pos.coords.longitude.toFixed(4),timestamp:new Date().toLocaleTimeString()})});
+  },err=>{console.warn(`Geolocation Error(${err.code}): ${err.message}`);}); }
+  setTimeout(()=>sendLocation(volunteerId),5000);
+}
+
+// ------------- REPORTING LOGIC -------------
+async function doReport(){
+  const isEmergency=document.getElementById("is_emergency_report").checked;
+  const type=document.getElementById("report_type").value;
+  const severity=document.getElementById("report_severity").value;
+  const volunteers_needed=document.getElementById("report_volunteers_needed").value;
+  const description=document.getElementById("report_description").value;
+  const location=document.getElementById("report_location").value;
+  const supplies_needed=document.getElementById("report_supplies").value;
+  const photoInput=document.getElementById("report_photo_input");
+  if(!type||!description||!location||photoInput.files.length===0){ document.getElementById("report-msg").innerText="Mandatory fields missing"; return; }
+  const reportPhoto=await fileToBase64(photoInput.files[0]);
+  const res=await fetch(API_BASE+"/api/report",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type,severity,is_emergency,is_emergency?"true":"false",volunteers_needed,description,reported_by:CURRENT_USER.username,location,supplies_needed,report_photo:reportPhoto})});
+  const j=await res.json();
+  document.getElementById("report-msg").innerText=j.message||j.error||"Report failed";
+  document.getElementById("report_description").value="";
+  document.getElementById("report_photo_input").value="";
+  document.getElementById("report_location").value="";
+  document.getElementById("report_type").value="";
+  document.getElementById("report_supplies").value="";
+  document.getElementById("report_severity").value="";
+  document.getElementById("report_volunteers_needed").value="";
+}
+
+// ------------- UTILITY -------------
+function fileToBase64(file){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=e=>reject(e);r.readAsDataURL(file);});}
+
+</script>
+</body>
+</html>
